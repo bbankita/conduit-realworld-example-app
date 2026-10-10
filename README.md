@@ -122,6 +122,27 @@ The following command will build the production version of the app:
 npm run start
 ```
 
+#### Docker
+
+The project includes a [`Dockerfile`](Dockerfile) and [`docker-compose.yml`](docker-compose.yml) that run the production build together with a PostgreSQL database, so you don't need Node.js or a database installed locally.
+
+```bash
+docker compose up --build
+```
+
+- The app (UI and API) is served at [`http://localhost:3001/`](http://localhost:3001), and the API is at [`http://localhost:3001/api`](http://localhost:3001/api).
+- The `db` service runs `postgres:16-alpine` (user, password and database are all `conduit`). Data is kept in the `db-data` volume.
+- The `app` waits until the database is healthy before it starts.
+- `JWT_KEY` defaults to `local-test-secret`. Set your own value for anything beyond local testing:
+
+  ```bash
+  JWT_KEY=your-secret docker compose up --build
+  ```
+
+- To stop the containers and delete the database volume, run `docker compose down -v`.
+
+> :information_source: The Dockerfile uses a multi-stage build. The first stage installs dependencies and builds the React frontend. The runtime stage starts the Express backend from `backend/`, which also serves `frontend/dist`.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
