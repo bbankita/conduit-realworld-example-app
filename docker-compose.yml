@@ -1,3 +1,11 @@
+x-db-env: &db-env
+  NODE_ENV: production
+  PROD_DB_USERNAME: conduit
+  PROD_DB_PASSWORD: conduit
+  PROD_DB_NAME: conduit
+  PROD_DB_HOSTNAME: db
+  PROD_DB_DIALECT: postgres
+
 services:
   db:
     image: postgres:16-alpine
@@ -19,22 +27,33 @@ services:
       db:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      <<: *db-env
       PORT: 3001
       JWT_KEY: ${JWT_KEY:-local-test-secret}
-      PROD_DB_USERNAME: conduit
-      PROD_DB_PASSWORD: conduit
-      PROD_DB_NAME: conduit
-      PROD_DB_HOSTNAME: db
-      PROD_DB_DIALECT: postgres
+      TEST_USER_EMAIL: ${TEST_USER_EMAIL:-testuser@conduit.local}
+      TEST_USER_USERNAME: ${TEST_USER_USERNAME:-testuser}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-TestPassword123!}
     ports:
       - "3001:3001"   # UI at http://localhost:3001 , API at http://localhost:3001/api
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/tags').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      # /api/articles joins Users, Articles, Tags and TagList, so it only succeeds once sync() has created them
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/articles?limit=1').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 10s
+
+  # One-shot job: runs the seeders after the app has created the tables.
+  # Seeders already recorded in the SequelizeData table are skipped, so data is only seeded once per database volume.
+  seed:
+    build: .
+    working_dir: /app
+    command: ["npm", "run", "sqlz", "--", "db:seed:all"]
+    environment: *db-env
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   db-data:

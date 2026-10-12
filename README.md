@@ -84,11 +84,13 @@ To install the project on your computer, follow these steps:
    > :information_source: The command `npm run sqlz` is an alias for `npx -w backend sequelize-cli`.  
    > Execute `npm run sqlz -- --help` to see more of `sequelize-cli` commands availables.
 
-6. Optionally you can run the following command to populate your database with some dummy data:
+6. Optionally you can run the following command to populate your database with some dummy data (5 users, `example1@mail.com` … `example5@mail.com` with passwords `examplePwd1` … `examplePwd5`, and 55 articles):
 
    ```bash
    npm run sqlz -- db:seed:all
    ```
+
+   > :information_source: Seeders that already ran are recorded in the `SequelizeData` table and skipped, so running this again won't duplicate data. To reseed, run `npm run sqlz -- db:seed:undo:all` first (this deletes **all** users and articles).
 
 ### Usage
 
@@ -139,6 +141,8 @@ docker compose up --build
   JWT_KEY=your-secret docker compose up --build
   ```
 
+- A standard test user is created on startup (if it doesn't already exist), so test automation can log in right away: email `testuser@conduit.local`, username `testuser`, password `TestPassword123!`. Override with `TEST_USER_EMAIL`, `TEST_USER_USERNAME` and `TEST_USER_PASSWORD`, the same way as `JWT_KEY`.
+- The one-shot `seed` service runs `npm run sqlz -- db:seed:all` after the app is healthy. Dummy data (see [Configuration](#configuration) step 6) is only loaded the first time, on a fresh database volume; later launches skip it.
 - To stop the containers and delete the database volume, run `docker compose down -v`.
 
 > :information_source: The Dockerfile uses a multi-stage build. The first stage installs dependencies and builds the React frontend. The runtime stage starts the Express backend from `backend/`, which also serves `frontend/dist`.

@@ -5,6 +5,7 @@ const express = require("express");
 const cors = require("cors");
 const { sequelize } = require("./models");
 const errorHandler = require("./middleware/errorHandler");
+const seedTestUser = require("./helper/seedTestUser");
 
 const usersRoutes = require("./routes/users");
 const userRoutes = require("./routes/user");
@@ -22,6 +23,12 @@ app.use(express.json());
     console.log(`Connection with ${env} database has been established.`);
   } catch (error) {
     console.error("Unable to connect to the database:", error);
+  }
+
+  try {
+    await seedTestUser();
+  } catch (error) {
+    console.error("Unable to seed test user:", error);
   }
 })();
 
