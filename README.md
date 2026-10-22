@@ -92,6 +92,28 @@ To install the project on your computer, follow these steps:
 
    > :information_source: Seeders that already ran are recorded in the `SequelizeData` table and skipped, so running this again won't duplicate data. To reseed, run `npm run sqlz -- db:seed:undo:all` first (this deletes **all** users and articles).
 
+### Authentication
+
+Signing up or logging in returns a JWT signed with `JWT_KEY`. Send it on authenticated requests in the `Authorization` header, using the `Token` scheme:
+
+```http
+Authorization: Token <jwt>
+```
+
+Tokens expire **7 days** after they are issued. To change that, set `JWT_EXPIRES_IN` in your `.env` to any value [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken#usage) accepts (e.g. `12h`, `30m`, or a number of seconds). Only tokens issued after the change use the new lifetime. Using the app doesn't extend a token, so once it expires the user has to log in again.
+
+If a request sends an `Authorization` header that can't be verified, the API responds with `401 Unauthorized` and a RealWorld-style error body (`{ "errors": { "body": [message] } }`):
+
+| Situation                                                             | Message                             |
+| --------------------------------------------------------------------- | ----------------------------------- |
+| Token has expired                                                     | `Token expired, please login again` |
+| Header isn't `Token <jwt>`, or the JWT is malformed                   | `Token missing or malformed`        |
+| Any other verification failure (e.g. signed with a different key)     | `Invalid token`                     |
+
+If the token is valid but its user no longer exists, the API responds with `404` (`User not found`). Requests without an `Authorization` header aren't rejected by the auth middleware. Endpoints that need a logged-in user return `401` (`You need to login first!`).
+
+> :information_source: The signature is checked before the expiry, so an expired token signed with a different `JWT_KEY` gets `Invalid token`, not `Token expired`.
+
 ### Usage
 
 #### Development Server
@@ -140,6 +162,8 @@ docker compose up --build
   ```bash
   JWT_KEY=your-secret docker compose up --build
   ```
+
+- Tokens issued by the container expire after the default 7 days. `docker-compose.yml` doesn't pass `JWT_EXPIRES_IN` to the app, so to change the lifetime, add it under the `app` service's `environment:` first (see [Authentication](#authentication)).
 
 - A standard test user is created on startup (if it doesn't already exist), so test automation can log in right away: email `testuser@conduit.local`, username `testuser`, password `TestPassword123!`. Override with `TEST_USER_EMAIL`, `TEST_USER_USERNAME` and `TEST_USER_PASSWORD`, the same way as `JWT_KEY`.
 - The one-shot `seed` service runs `npm run sqlz -- db:seed:all` after the app is healthy. Dummy data (see [Configuration](#configuration) step 6) is only loaded the first time, on a fresh database volume; later launches skip it.
