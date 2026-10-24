@@ -9,6 +9,8 @@ x-db-env: &db-env
 services:
   db:
     image: postgres:16-alpine
+    ports:
+      - "5432:5432"   # exposed so the test framework can interact with DB via JDBC
     environment:
       POSTGRES_USER: conduit
       POSTGRES_PASSWORD: conduit
